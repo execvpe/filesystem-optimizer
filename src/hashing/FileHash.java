@@ -1,18 +1,19 @@
 package hashing;
 
+import main.Main;
+
 import java.io.*;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 
-public final class Hashing {
+public final class FileHash {
     private MessageDigest digest;
 
-    public Hashing(String algorithm) {
+    public FileHash(String algorithm) {
         try {
             digest = MessageDigest.getInstance(algorithm);
         } catch (NoSuchAlgorithmException e) {
-            e.printStackTrace();
-            System.exit(1);
+            Main.die("Algorithm \"" + algorithm + "\" is invalid or not available in this environment!");
         }
     }
 
@@ -31,11 +32,11 @@ public final class Hashing {
     }
 
     public String toHexString(byte[] checksum) throws IOException {
-        StringBuilder sb = new StringBuilder();
-        for (byte aByte : checksum) {
-            sb.append(Integer.toString((aByte & 0xff) + 0x100, 16).substring(1));
+        StringBuilder stringBuilder = new StringBuilder();
+        for (byte b : checksum) {
+            stringBuilder.append(Integer.toString((b & 0xff) + 0x100, 16).substring(1));
         }
 
-        return sb.toString();
+        return stringBuilder.toString();
     }
 }

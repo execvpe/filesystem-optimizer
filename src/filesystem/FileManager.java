@@ -1,24 +1,29 @@
 package filesystem;
 
-import com.sun.istack.internal.NotNull;
 import hashing.FileHash;
 import main.ArgParser;
-import main.Main;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.*;
+import java.util.HashSet;
 
 public class FileManager {
-    private static final boolean LIST_DUPLICATES = Main.argParser.isSet(ArgParser.BivalentKey.LIST_DUPLICATES);
-    private static final boolean LIST_EMPTY_DIRS = Main.argParser.isSet(ArgParser.BivalentKey.LIST_EMPTY_DIRS);
-    private static final boolean LIST_EMPTY_FILES = Main.argParser.isSet(ArgParser.BivalentKey.LIST_EMPTY_FILES);
-    private static final Long MAX_FILE_SIZE = (Long) Main.argParser.getValue(ArgParser.ValueKey.MAX_FILE_SIZE);
-    private static final Long MIN_FILE_SIZE = (Long) Main.argParser.getValue(ArgParser.ValueKey.MIN_FILE_SIZE);
+    private final ArgParser argParser;
+    private final FileHash fileHash;
+    private final HashSet<FileAttributeWrapper> wrappers;
+    private boolean listDuplicates;
+    private boolean listEmptyDirs;
+    private boolean listEmptyFiles;
+    private Long maxFileSize;
+    private Long minFileSize;
 
-    private final FileHash fileHash =
-            new FileHash((String) Main.argParser.getValue(ArgParser.ValueKey.HASH_ALGORITHM));
-    private final HashSet<FileAttributeWrapper> wrappers = new HashSet<>(1028);
+    public FileManager(ArgParser argParser) {
+        this.argParser = argParser;
+        this.fileHash = new FileHash((String) argParser.getValue(ArgParser.ValueKey.HASH_ALGORITHM));
+        this.wrappers = new HashSet<>(1024);
+        reloadArgs();
+    }
+
 
     public void crawlFilesystem(String directoryPathname) throws IOException {
         if (directoryPathname.length() == 0)
@@ -26,11 +31,11 @@ public class FileManager {
 
         File directory = new File(directoryPathname);
         if (!directory.exists()) {
-            System.err.println("\"" + directory.getCanonicalPath() + "\" does not exist!");
+            printDebug("\"" + directory.getCanonicalPath() + "\" does not exist!");
             return;
         }
         if (!directory.isDirectory()) {
-            System.err.println("\"" + directory.getCanonicalPath() + "\" is not a directory!");
+            printDebug("\"" + directory.getCanonicalPath() + "\" is not a directory!");
             return;
         }
 
@@ -41,25 +46,31 @@ public class FileManager {
         return wrappers.size();
     }
 
+    public void reloadArgs() {
+        listDuplicates = argParser.isSet(ArgParser.BivalentKey.LIST_DUPLICATES);
+        listEmptyDirs = argParser.isSet(ArgParser.BivalentKey.LIST_EMPTY_DIRS);
+        listEmptyFiles = argParser.isSet(ArgParser.BivalentKey.LIST_EMPTY_FILES);
+        maxFileSize = (Long) argParser.getValue(ArgParser.ValueKey.MAX_FILE_SIZE);
+        minFileSize = (Long) argParser.getValue(ArgParser.ValueKey.MIN_FILE_SIZE);
+    }
+
     private void readFile(File file, final int depth) throws IOException {
         String fileName = file.getName();
         long fileSize = file.length();
 
         if (fileSize == 0) {
-            if (LIST_EMPTY_FILES) {
+            if (listEmptyFiles) {
                 System.out.println(file.getCanonicalPath());
             }
             //TODO: skip empty files
         }
 
-        if (MAX_FILE_SIZE != null && fileSize > MAX_FILE_SIZE) {
-            System.err.printf("%1$" + depth + "s", " ");
-            System.err.println("Skipped file \"" + fileName + "\": too big (" + (fileSize / 1_048_576L) + " MiB)");
+        if (maxFileSize != null && fileSize > maxFileSize) {
+            printDebug("Skipped file \"" + fileName + "\": too big (" + (fileSize / 1_048_576L) + " MiB)", depth);
             return;
         }
-        if (MIN_FILE_SIZE != null && fileSize < MIN_FILE_SIZE) {
-            System.err.printf("%1$" + depth + "s", " ");
-            System.err.println("Skipped file \"" + fileName + "\": too small (" + (fileSize / 1_024L) + " KiB)");
+        if (minFileSize != null && fileSize < minFileSize) {
+            printDebug("Skipped file \"" + fileName + "\": too small (" + (fileSize / 1_024L) + " KiB)", depth);
             return;
         }
 
@@ -73,23 +84,20 @@ public class FileManager {
                 = new FileAttributeWrapper(filenameExtension, fileHash.getFileChecksum(file), fileSize);
 
         if (!wrappers.add(newWrapper)) { // File is already known
-            if (LIST_DUPLICATES) {
+            if (listDuplicates) {
                 System.out.println(file.getCanonicalPath());
             }
         }
     }
 
     private void traverseDirectory(File directory, final int depth) throws IOException {
-        if (depth > 0) {
-            System.err.printf("%1$" + depth + "s", " ");
-        }
-        System.err.println("Traversing... \"" + directory.getCanonicalPath() + "\"");
+        printDebug("Entering directory \"" + directory.getCanonicalPath() + "\"", depth);
         File[] directoryEntries = directory.listFiles();
 
         if (directoryEntries == null)
             return;
 
-        if (LIST_EMPTY_DIRS && directoryEntries.length == 0) {
+        if (listEmptyDirs && directoryEntries.length == 0) {
             System.out.println(directory.getCanonicalPath());
             return;
         }
@@ -107,44 +115,18 @@ public class FileManager {
             }
         }
 
+        printDebug("Analyzed " + analyzedEntries + "/" + directoryEntries.length
+                + " entries in \"" + directory.getCanonicalPath() + "\"", depth);
+    }
+
+    private static void printDebug(String message, int depth) {
         if (depth > 0) {
             System.err.printf("%1$" + depth + "s", " ");
         }
-        System.err.println("Analyzed " + analyzedEntries + "/" + directoryEntries.length
-                + " entries in \"" + directory.getCanonicalPath() + "\"");
+        System.err.println(message);
     }
 
-    private static class FileAttributeWrapper {
-        public static final String NO_FILENAME_EXTENSION = "\\:*/";
-
-        public final String filenameExtension;
-        public final byte[] hash;
-        public final long size;
-
-        private FileAttributeWrapper(@NotNull String filenameExtension, @NotNull byte[] hash, @NotNull long size) {
-            this.filenameExtension = filenameExtension;
-            this.hash = hash;
-            this.size = size;
-        }
-
-        @Override
-        public int hashCode() {
-            return 31 * Objects.hash(filenameExtension, size) + Arrays.hashCode(hash);
-        }
-
-        @Override
-        public boolean equals(Object o) {
-            if (!(o instanceof FileAttributeWrapper)) // implicit null check
-                return false;
-
-            FileAttributeWrapper that = (FileAttributeWrapper) o;
-
-            // A file is only considered equal to another if it has the same size, filename extension and hash
-            // (paranoid about possible data loss due to conflicting checksum).
-            // Almost impossible, but still...
-            return (this.size == that.size)
-                    && this.filenameExtension.equalsIgnoreCase(that.filenameExtension)
-                    && Arrays.equals(this.hash, that.hash);
-        }
+    private static void printDebug(String message) {
+        printDebug(message, -1);
     }
 }

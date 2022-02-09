@@ -4,11 +4,12 @@ import com.sun.istack.internal.NotNull;
 
 import java.io.File;
 import java.util.HashMap;
-import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.function.Consumer;
 
 public class ArgParser {
     private final HashMap<Key, Object> arguments = new HashMap<>();
-    private final AtomicBoolean immutable = new AtomicBoolean(false);
+    private Consumer<String> onError;
+    private Consumer<String> onWarning;
 
     public enum BivalentKey implements Key {
         LIST_DUPLICATES,
@@ -28,12 +29,9 @@ public class ArgParser {
 
     private interface Key {}
 
-    public ArgParser(String[] args) {
-        try {
-            parse(args);
-        } catch (ArrayIndexOutOfBoundsException e) {
-            Main.die("Missing argument!");
-        }
+    public ArgParser() {
+        this.onError = System.err::println;
+        this.onWarning = System.err::println;
     }
 
     public Object getValue(@NotNull Key key) {
@@ -45,24 +43,39 @@ public class ArgParser {
         return (b != null) && b;
     }
 
-    public ArgParser makeImmutable() {
-        immutable.set(true);
+    public ArgParser onError(Consumer<String> onError) {
+        this.onError = onError;
+        return this;
+    }
+
+    public ArgParser onWarning(Consumer<String> onWarning) {
+        this.onWarning = onWarning;
+        return this;
+    }
+
+    public ArgParser parseArgs(String[] args) {
+        try {
+            parseInternally(args);
+        } catch (ArrayIndexOutOfBoundsException e) {
+            onError.accept("Missing argument!");
+        }
         return this;
     }
 
     public ArgParser setDefaultIfAbsent(Key key, Object object) {
-        if (immutable.get()) {
-            throw new UnsupportedOperationException("Immutable flag is set!");
-        }
         arguments.putIfAbsent(key, object);
         return this;
     }
 
-    private void parse(String[] args) {
+    private void parseInternally(String[] args) {
         for (int i = 0; i < args.length; i++) {
             switch (args[i]) {
                 case "--help":
-                    Main.die("The source code is the only help you will ever get out of this program :)");
+                    onError.accept("The source code is the only help you will ever get out of this program :)");
+                    break;
+                case "--directory-file":
+                case "-f":
+                    registerArgument(ValueKey.DIR_FILE, new File(args[++i]));
                     break;
                 case "--hash-algorithm":
                 case "-al":
@@ -92,23 +105,14 @@ public class ArgParser {
                 case "-N":
                     registerArgument(BivalentKey.INTERACTIVE_CONSOLE, false);
                     break;
-
                 default:
-                    if (args[i].startsWith("-")) {
-                        Main.die("Unknown option: \"" + args[i] + "\"");
-                    }
-                    registerArgument(ValueKey.DIR_FILE, new File(args[i]));
+                    onWarning.accept("Unknown token: \"" + args[i] + "\"");
+                    break;
             }
         }
     }
 
-    private void registerArgument(Key key, Object value) {
-        if (arguments.put(key, value) != null) {
-            Main.die("Key \"" + key + "\" is already associated with a value!");
-        }
-    }
-
-    private static long parseLongSuffix(String input) {
+    private Long parseLongSuffix(String input) {
         int suffixPos = -1;
         for (int i = 0; i < input.length(); i++) {
             if (!Character.isDigit(input.charAt(i))) {
@@ -137,8 +141,15 @@ public class ArgParser {
             case "Ti":
                 return digits * 1_099_511_627_766L;
             default:
-                Main.die("Unknown binary suffix \"" + suffix + "\"");
-                return -1;
+                onError.accept("Unknown binary suffix \"" + suffix + "\"");
+                return null;
+        }
+    }
+
+    private void registerArgument(Key key, Object value) {
+        if (arguments.put(key, value) != null) {
+            onWarning.accept("This key (" + key
+                    + ") is already associated with a value. The old value will be overwritten.");
         }
     }
 }

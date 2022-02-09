@@ -1,23 +1,32 @@
 package main;
 
+import com.sun.istack.internal.NotNull;
+
 import java.io.File;
 import java.util.HashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 public class ArgParser {
-    private final HashMap<ArgOption, Object> arguments = new HashMap<>();
+    private final HashMap<Key, Object> arguments = new HashMap<>();
     private final AtomicBoolean immutable = new AtomicBoolean(false);
 
-    public enum ArgOption {
-        HASH_ALGORITHM,
+    public enum BivalentKey implements Key {
         LIST_DUPLICATES,
         LIST_EMPTY_DIRS,
         LIST_EMPTY_FILES,
+
+        INTERACTIVE_CONSOLE,
+    }
+
+    public enum ValueKey implements Key {
+        HASH_ALGORITHM,
         MAX_FILE_SIZE,
         MIN_FILE_SIZE,
 
         DIR_FILE,
     }
+
+    private interface Key {}
 
     public ArgParser(String[] args) {
         try {
@@ -27,19 +36,26 @@ public class ArgParser {
         }
     }
 
-    public Object getArgument(ArgOption argOption) {
-        return arguments.get(argOption);
+    public Object getValue(@NotNull Key key) {
+        return arguments.get(key);
     }
 
-    public void makeImmutable() {
+    public boolean isSet(@NotNull BivalentKey key) {
+        Boolean b = (Boolean) arguments.get(key);
+        return (b != null) && b;
+    }
+
+    public ArgParser makeImmutable() {
         immutable.set(true);
+        return this;
     }
 
-    public void setDefaultIfAbsent(ArgOption argOption, Object object) {
+    public ArgParser setDefaultIfAbsent(Key key, Object object) {
         if (immutable.get()) {
             throw new UnsupportedOperationException("Immutable flag is set!");
         }
-        arguments.putIfAbsent(argOption, object);
+        arguments.putIfAbsent(key, object);
+        return this;
     }
 
     private void parse(String[] args) {
@@ -50,41 +66,45 @@ public class ArgParser {
                     break;
                 case "--hash-algorithm":
                 case "-al":
-                    registerArgument(ArgOption.HASH_ALGORITHM, args[++i]);
+                    registerArgument(ValueKey.HASH_ALGORITHM, args[++i]);
                     break;
                 case "--list-duplicates":
                 case "-dup":
-                    registerArgument(ArgOption.LIST_DUPLICATES, Boolean.TRUE);
+                    registerArgument(BivalentKey.LIST_DUPLICATES, true);
                     break;
                 case "--list-empty-dirs":
                 case "-ed":
-                    registerArgument(ArgOption.LIST_EMPTY_DIRS, Boolean.TRUE);
+                    registerArgument(BivalentKey.LIST_EMPTY_DIRS, true);
                     break;
                 case "--list-empty-files":
                 case "-ef":
-                    registerArgument(ArgOption.LIST_EMPTY_FILES, Boolean.TRUE);
+                    registerArgument(BivalentKey.LIST_EMPTY_FILES, true);
                     break;
                 case "--max-file-size":
                 case "-max":
-                    registerArgument(ArgOption.MAX_FILE_SIZE, parseLongSuffix(args[++i]));
+                    registerArgument(ValueKey.MAX_FILE_SIZE, parseLongSuffix(args[++i]));
                     break;
                 case "--min-file-size":
                 case "-min":
-                    registerArgument(ArgOption.MIN_FILE_SIZE, parseLongSuffix(args[++i]));
+                    registerArgument(ValueKey.MIN_FILE_SIZE, parseLongSuffix(args[++i]));
+                    break;
+                case "--no-interactive":
+                case "-N":
+                    registerArgument(BivalentKey.INTERACTIVE_CONSOLE, false);
                     break;
 
                 default:
                     if (args[i].startsWith("-")) {
                         Main.die("Unknown option: \"" + args[i] + "\"");
                     }
-                    registerArgument(ArgOption.DIR_FILE, new File(args[i]));
+                    registerArgument(ValueKey.DIR_FILE, new File(args[i]));
             }
         }
     }
 
-    private void registerArgument(ArgOption option, Object value) {
-        if (arguments.put(option, value) != null) {
-            Main.die("Option \"" + option + "\" specified twice!");
+    private void registerArgument(Key key, Object value) {
+        if (arguments.put(key, value) != null) {
+            Main.die("Key \"" + key + "\" is already associated with a value!");
         }
     }
 

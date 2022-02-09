@@ -10,14 +10,14 @@ import java.io.IOException;
 import java.util.*;
 
 public class FileManager {
-    private static final Boolean LIST_DUPLICATES = (Boolean) Main.argParser.getArgument(ArgParser.ArgOption.LIST_DUPLICATES);
-    private static final Boolean LIST_EMPTY_DIRS = (Boolean) Main.argParser.getArgument(ArgParser.ArgOption.LIST_EMPTY_DIRS);
-    private static final Boolean LIST_EMPTY_FILES = (Boolean) Main.argParser.getArgument(ArgParser.ArgOption.LIST_EMPTY_FILES);
-    private static final Long MAX_FILE_SIZE = (Long) Main.argParser.getArgument(ArgParser.ArgOption.MAX_FILE_SIZE);
-    private static final Long MIN_FILE_SIZE = (Long) Main.argParser.getArgument(ArgParser.ArgOption.MIN_FILE_SIZE);
+    private static final boolean LIST_DUPLICATES = Main.argParser.isSet(ArgParser.BivalentKey.LIST_DUPLICATES);
+    private static final boolean LIST_EMPTY_DIRS = Main.argParser.isSet(ArgParser.BivalentKey.LIST_EMPTY_DIRS);
+    private static final boolean LIST_EMPTY_FILES = Main.argParser.isSet(ArgParser.BivalentKey.LIST_EMPTY_FILES);
+    private static final Long MAX_FILE_SIZE = (Long) Main.argParser.getValue(ArgParser.ValueKey.MAX_FILE_SIZE);
+    private static final Long MIN_FILE_SIZE = (Long) Main.argParser.getValue(ArgParser.ValueKey.MIN_FILE_SIZE);
 
     private final FileHash fileHash =
-            new FileHash((String) Main.argParser.getArgument(ArgParser.ArgOption.HASH_ALGORITHM));
+            new FileHash((String) Main.argParser.getValue(ArgParser.ValueKey.HASH_ALGORITHM));
     private final HashSet<FileAttributeWrapper> wrappers = new HashSet<>(1028);
 
     public void crawlFilesystem(String directoryPathname) throws IOException {
@@ -37,17 +37,19 @@ public class FileManager {
         traverseDirectory(directory, 0);
     }
 
+    public int elements() {
+        return wrappers.size();
+    }
+
     private void readFile(File file, final int depth) throws IOException {
         String fileName = file.getName();
         long fileSize = file.length();
 
-        if (LIST_EMPTY_FILES != null && fileSize == 0) {
-            System.out.println(file.getCanonicalPath());
-            return;
-        }
-
-        if (LIST_DUPLICATES == null) {
-            return;
+        if (fileSize == 0) {
+            if (LIST_EMPTY_FILES) {
+                System.out.println(file.getCanonicalPath());
+            }
+            //TODO: skip empty files
         }
 
         if (MAX_FILE_SIZE != null && fileSize > MAX_FILE_SIZE) {
@@ -71,7 +73,9 @@ public class FileManager {
                 = new FileAttributeWrapper(filenameExtension, fileHash.getFileChecksum(file), fileSize);
 
         if (!wrappers.add(newWrapper)) { // File is already known
-            System.out.println(file.getCanonicalPath());
+            if (LIST_DUPLICATES) {
+                System.out.println(file.getCanonicalPath());
+            }
         }
     }
 
@@ -85,7 +89,7 @@ public class FileManager {
         if (directoryEntries == null)
             return;
 
-        if (LIST_EMPTY_DIRS != null && directoryEntries.length == 0) {
+        if (LIST_EMPTY_DIRS && directoryEntries.length == 0) {
             System.out.println(directory.getCanonicalPath());
             return;
         }

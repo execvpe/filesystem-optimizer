@@ -21,13 +21,14 @@ public class FileManager {
         this.argParser = argParser;
         this.fileHash = new FileHash((String) argParser.getValue(ArgParser.ValueKey.HASH_ALGORITHM));
         this.wrappers = new HashSet<>(1024);
-        reloadArgs();
     }
 
 
     public void crawlFilesystem(String directoryPathname) throws IOException {
         if (directoryPathname.length() == 0)
             return;
+
+        reloadArgs();
 
         File directory = new File(directoryPathname);
         if (!directory.exists()) {
@@ -44,14 +45,6 @@ public class FileManager {
 
     public int elements() {
         return wrappers.size();
-    }
-
-    public void reloadArgs() {
-        listDuplicates = argParser.isSet(ArgParser.BivalentKey.LIST_DUPLICATES);
-        listEmptyDirs = argParser.isSet(ArgParser.BivalentKey.LIST_EMPTY_DIRS);
-        listEmptyFiles = argParser.isSet(ArgParser.BivalentKey.LIST_EMPTY_FILES);
-        maxFileSize = (Long) argParser.getValue(ArgParser.ValueKey.MAX_FILE_SIZE);
-        minFileSize = (Long) argParser.getValue(ArgParser.ValueKey.MIN_FILE_SIZE);
     }
 
     private void readFile(File file, final int depth) throws IOException {
@@ -88,6 +81,14 @@ public class FileManager {
                 System.out.println(file.getCanonicalPath());
             }
         }
+    }
+
+    private void reloadArgs() {
+        listDuplicates = argParser.isSet(ArgParser.BivalentKey.LIST_DUPLICATES);
+        listEmptyDirs = argParser.isSet(ArgParser.BivalentKey.LIST_EMPTY_DIRS);
+        listEmptyFiles = argParser.isSet(ArgParser.BivalentKey.LIST_EMPTY_FILES);
+        maxFileSize = (Long) argParser.getValue(ArgParser.ValueKey.MAX_FILE_SIZE);
+        minFileSize = (Long) argParser.getValue(ArgParser.ValueKey.MIN_FILE_SIZE);
     }
 
     private void traverseDirectory(File directory, final int depth) throws IOException {

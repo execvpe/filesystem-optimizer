@@ -17,6 +17,8 @@ public class Main {
     }
 
     public static void main(String[] args) throws Exception {
+        System.err.println("Filesystem Optimizer v1.0");
+
         ArgParser argParser = new ArgParser()
                 .onError(Main::die)
                 .onWarning(Main::hint)
@@ -62,31 +64,42 @@ public class Main {
                 case "crawl":
                 case "c":
                     if (tokens.length == 1) {
-                        hint("No arguments given. Do nothing...");
+                        hint("No arguments given! Action aborted.");
                         break;
                     }
                     for (int i = 1; i < tokens.length; i++) {
                         fileManager.crawlFilesystem(tokens[i]);
                     }
                     break;
+                case "drop-wrappers":
+                case "rw":
+                    fileManager.dropWrappers();
+                    break;
                 case "dump-wrappers":
-                case "d":
+                case "dw":
                     if (tokens.length == 1) {
-                        hint("No argument given. Do nothing...");
+                        hint("No argument given! Action aborted.");
                         break;
+                    }
+                    if (tokens.length > 2) {
+                        hint("Multiple arguments given! Using the first...");
                     }
                     fileManager.dumpWrappers(new File(tokens[1]));
                     break;
                 case "load-wrappers":
-                case "l":
+                case "lw":
                     if (tokens.length == 1) {
                         hint("No argument given. Do nothing...");
                         break;
                     }
                     fileManager.loadWrappers(new File(tokens[1]));
                     break;
-                case "options":
-                case "o":
+                case "drop-options":
+                case "do":
+                    argParser.clear();
+                    break;
+                case "add-options":
+                case "ao":
                     String[] newArgs = new String[tokens.length - 1];
                     System.arraycopy(tokens, 1, newArgs, 0, newArgs.length);
                     argParser.parseArgs(newArgs);

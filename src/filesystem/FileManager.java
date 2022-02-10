@@ -48,9 +48,13 @@ public class FileManager {
         traverseDirectory(directory, 0);
     }
 
+    public void dropWrappers() {
+        wrappers.clear();
+    }
+
     public void dumpWrappers(File dumpFile) throws IOException {
         if (dumpFile.exists()) {
-            printDebug("File \"" + dumpFile.getCanonicalPath() + "\" does already exist! Do nothing...");
+            printDebug("File \"" + dumpFile.getCanonicalPath() + "\" does already exist! Action aborted.");
             return;
         }
 
@@ -76,7 +80,7 @@ public class FileManager {
 
     public void loadWrappers(File dumpedWrappers) throws IOException {
         if (!dumpedWrappers.exists()) {
-            printDebug("File \"" + dumpedWrappers.getCanonicalPath() + "\" does already exist! Do nothing...");
+            printDebug("File \"" + dumpedWrappers.getCanonicalPath() + "\" does not exist! Action aborted.");
             return;
         }
 
@@ -88,13 +92,21 @@ public class FileManager {
         }
         while (scanner.hasNextLine()) {
             String line = scanner.nextLine();
-            if (line.equals(SECTION_SEPARATOR)) {
+
+            if (line.length() == 0)
+                continue;
+
+            if (line.equals(SECTION_SEPARATOR))
                 break;
-            }
+
             crawledPaths.add("L>" + line);
         }
         while (scanner.hasNextLine()) {
             String line = scanner.nextLine();
+
+            if (line.length() == 0)
+                continue;
+
             if (!wrappers.add(FileAttributeWrapper.fromString(line))) {
                 printDebug("Wrapper represented by \"" + line + "\" is already present!");
             }
@@ -116,11 +128,11 @@ public class FileManager {
         }
 
         if (maxFileSize != null && fileSize > maxFileSize) {
-            printDebug("Skipped file \"" + fileName + "\": too big (" + (fileSize / 1_048_576L) + " MiB)", depth);
+            printWithDepth("Skipped file \"" + fileName + "\": too big (" + (fileSize / 1_048_576L) + " MiB)", depth);
             return;
         }
         if (minFileSize != null && fileSize < minFileSize) {
-            printDebug("Skipped file \"" + fileName + "\": too small (" + (fileSize / 1_024L) + " KiB)", depth);
+            printWithDepth("Skipped file \"" + fileName + "\": too small (" + (fileSize / 1_024L) + " KiB)", depth);
             return;
         }
 
@@ -150,7 +162,7 @@ public class FileManager {
     }
 
     private void traverseDirectory(File directory, final int depth) throws IOException {
-        printDebug("Entering directory \"" + directory.getCanonicalPath() + "\"", depth);
+        printWithDepth("Entering directory \"" + directory.getCanonicalPath() + "\"", depth);
         File[] directoryEntries = directory.listFiles();
 
         if (directoryEntries == null)
@@ -174,18 +186,18 @@ public class FileManager {
             }
         }
 
-        printDebug("Analyzed " + analyzedEntries + "/" + directoryEntries.length
+        printWithDepth("Analyzed " + analyzedEntries + "/" + directoryEntries.length
                 + " entries in \"" + directory.getCanonicalPath() + "\"", depth);
-    }
-
-    private static void printDebug(String message, int depth) {
-        if (depth > 0) {
-            System.err.printf("%1$" + depth + "s", " ");
-        }
-        System.err.println(message);
     }
 
     private static void printDebug(String message) {
         Main.hint(message);
+    }
+
+    private static void printWithDepth(String message, int depth) {
+        if (depth > 0) {
+            System.err.printf("%1$" + depth + "s", " ");
+        }
+        System.err.println(message);
     }
 }

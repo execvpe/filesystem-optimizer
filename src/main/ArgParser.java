@@ -35,6 +35,11 @@ public class ArgParser {
         this.onWarning = System.err::println;
     }
 
+    public ArgParser clear() {
+        arguments.clear();
+        return this;
+    }
+
     public Object getValue(@NotNull Key key) {
         return arguments.get(key);
     }

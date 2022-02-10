@@ -2,10 +2,10 @@ package filesystem;
 
 import hashing.FileHash;
 import main.ArgParser;
+import main.Main;
 
-import java.io.File;
-import java.io.IOException;
-import java.util.HashSet;
+import java.io.*;
+import java.util.*;
 
 public class FileManager {
     private final ArgParser argParser;
@@ -43,8 +43,45 @@ public class FileManager {
         traverseDirectory(directory, 0);
     }
 
+    public void dumpWrappers(File dumpFile) throws IOException {
+        if (dumpFile.exists()) {
+            printDebug("File \"" + dumpFile.getCanonicalPath() + "\" does already exist! Do nothing...");
+            return;
+        }
+
+        BufferedWriter bufferedWriter = new BufferedWriter(new FileWriter(dumpFile), 1_048_576);
+        bufferedWriter.write("FILE WRAPPER DUMP (" + elements() + ") - " + new Date());
+        bufferedWriter.newLine();
+        for (FileAttributeWrapper w : wrappers) {
+            bufferedWriter.write(w.toString());
+            bufferedWriter.newLine();
+        }
+        bufferedWriter.close();
+    }
+
     public int elements() {
         return wrappers.size();
+    }
+
+    public void loadWrappers(File dumpedWrappers) throws IOException {
+        if (!dumpedWrappers.exists()) {
+            printDebug("File \"" + dumpedWrappers.getCanonicalPath() + "\" does already exist! Do nothing...");
+            return;
+        }
+
+        Scanner scanner = new Scanner(dumpedWrappers);
+        if (!scanner.hasNextLine() || !scanner.nextLine().startsWith("FILE WRAPPER DUMP")) {
+            scanner.close();
+            printDebug("Not a valid wrapper dump!");
+            return;
+        }
+        while (scanner.hasNextLine()) {
+            String line = scanner.nextLine();
+            if (!wrappers.add(FileAttributeWrapper.fromString(line))) {
+                printDebug("Wrapper represented by \"" + line + "\" is already present!");
+            }
+        }
+        scanner.close();
     }
 
     private void readFile(File file, final int depth) throws IOException {
@@ -128,6 +165,6 @@ public class FileManager {
     }
 
     private static void printDebug(String message) {
-        printDebug(message, -1);
+        Main.hint(message);
     }
 }

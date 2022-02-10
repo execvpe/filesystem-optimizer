@@ -1,6 +1,7 @@
 package filesystem;
 
 import com.sun.istack.internal.NotNull;
+import hashing.FileHash;
 
 import java.util.Arrays;
 import java.util.Objects;
@@ -36,5 +37,27 @@ final class FileAttributeWrapper {
         return (this.size == that.size)
                 && this.filenameExtension.equalsIgnoreCase(that.filenameExtension)
                 && Arrays.equals(this.hash, that.hash);
+    }
+
+    @Override
+    public String toString() {
+        StringBuilder stringBuilder = new StringBuilder(80)
+                .append(FileHash.toHexString(hash)).append(';')
+                .append(size).append(';');
+
+        if (!filenameExtension.equalsIgnoreCase(NO_FILENAME_EXTENSION)) {
+            stringBuilder.append(filenameExtension);
+        }
+
+        return stringBuilder.toString();
+    }
+
+    public static FileAttributeWrapper fromString(String dumped) {
+        String[] tokens = dumped.split(";");
+
+        return new FileAttributeWrapper(
+                (tokens.length < 3) ? NO_FILENAME_EXTENSION : tokens[2],
+                FileHash.fromHexString(tokens[0]),
+                Long.parseLong(tokens[1]));
     }
 }

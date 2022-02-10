@@ -13,7 +13,7 @@ public class Main {
     }
 
     public static void hint(String message) {
-        System.err.println("[WARN] " + message);
+        System.err.println("[INFO/WARN] " + message);
     }
 
     public static void main(String[] args) throws Exception {
@@ -44,7 +44,7 @@ public class Main {
 
         Scanner stdinScanner = new Scanner(System.in);
         while (true) {
-            System.err.printf("(%d) $> ", fileManager.elements());
+            System.err.printf("(%d)$> ", fileManager.elements());
 
             if (!stdinScanner.hasNextLine())
                 break;
@@ -69,12 +69,30 @@ public class Main {
                         fileManager.crawlFilesystem(tokens[i]);
                     }
                     break;
+                case "dump-wrappers":
+                case "d":
+                    if (tokens.length == 1) {
+                        hint("No argument given. Do nothing...");
+                        break;
+                    }
+                    fileManager.dumpWrappers(new File(tokens[1]));
+                    break;
+                case "load-wrappers":
+                case "l":
+                    if (tokens.length == 1) {
+                        hint("No argument given. Do nothing...");
+                        break;
+                    }
+                    fileManager.loadWrappers(new File(tokens[1]));
+                    break;
                 case "options":
                 case "o":
                     String[] newArgs = new String[tokens.length - 1];
                     System.arraycopy(tokens, 1, newArgs, 0, newArgs.length);
                     argParser.parseArgs(newArgs);
                     break;
+                default:
+                    hint("Unknown command: \"" + tokens[0] + "\"");
             }
         }
         stdinScanner.close();

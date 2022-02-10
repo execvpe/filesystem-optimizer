@@ -8,7 +8,9 @@ import java.io.*;
 import java.util.*;
 
 public class FileManager {
+    private static final String SECTION_SEPARATOR = "* // * // * // *";
     private final ArgParser argParser;
+    private final ArrayList<String> crawledPaths;
     private final FileHash fileHash;
     private final HashSet<FileAttributeWrapper> wrappers;
     private boolean listDuplicates;
@@ -16,9 +18,11 @@ public class FileManager {
     private boolean listEmptyFiles;
     private Long maxFileSize;
     private Long minFileSize;
+    private boolean skipEmptyFiles;
 
     public FileManager(ArgParser argParser) {
         this.argParser = argParser;
+        this.crawledPaths = new ArrayList<>();
         this.fileHash = new FileHash((String) argParser.getValue(ArgParser.ValueKey.HASH_ALGORITHM));
         this.wrappers = new HashSet<>(1024);
     }
@@ -40,6 +44,7 @@ public class FileManager {
             return;
         }
 
+        crawledPaths.add(directory.getCanonicalPath());
         traverseDirectory(directory, 0);
     }
 
@@ -51,6 +56,12 @@ public class FileManager {
 
         BufferedWriter bufferedWriter = new BufferedWriter(new FileWriter(dumpFile), 1_048_576);
         bufferedWriter.write("FILE WRAPPER DUMP (" + elements() + ") - " + new Date());
+        bufferedWriter.newLine();
+        for (String canonicalPath : crawledPaths) {
+            bufferedWriter.write(canonicalPath);
+            bufferedWriter.newLine();
+        }
+        bufferedWriter.write(SECTION_SEPARATOR);
         bufferedWriter.newLine();
         for (FileAttributeWrapper w : wrappers) {
             bufferedWriter.write(w.toString());
@@ -77,6 +88,13 @@ public class FileManager {
         }
         while (scanner.hasNextLine()) {
             String line = scanner.nextLine();
+            if (line.equals(SECTION_SEPARATOR)) {
+                break;
+            }
+            crawledPaths.add("L>" + line);
+        }
+        while (scanner.hasNextLine()) {
+            String line = scanner.nextLine();
             if (!wrappers.add(FileAttributeWrapper.fromString(line))) {
                 printDebug("Wrapper represented by \"" + line + "\" is already present!");
             }
@@ -92,7 +110,9 @@ public class FileManager {
             if (listEmptyFiles) {
                 System.out.println(file.getCanonicalPath());
             }
-            //TODO: skip empty files
+            if (skipEmptyFiles) {
+                return;
+            }
         }
 
         if (maxFileSize != null && fileSize > maxFileSize) {
@@ -124,6 +144,7 @@ public class FileManager {
         listDuplicates = argParser.isSet(ArgParser.BivalentKey.LIST_DUPLICATES);
         listEmptyDirs = argParser.isSet(ArgParser.BivalentKey.LIST_EMPTY_DIRS);
         listEmptyFiles = argParser.isSet(ArgParser.BivalentKey.LIST_EMPTY_FILES);
+        skipEmptyFiles = argParser.isSet(ArgParser.BivalentKey.SKIP_EMPTY_FILES);
         maxFileSize = (Long) argParser.getValue(ArgParser.ValueKey.MAX_FILE_SIZE);
         minFileSize = (Long) argParser.getValue(ArgParser.ValueKey.MIN_FILE_SIZE);
     }

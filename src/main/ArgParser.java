@@ -15,6 +15,7 @@ public class ArgParser {
         LIST_DUPLICATES,
         LIST_EMPTY_DIRS,
         LIST_EMPTY_FILES,
+        SKIP_EMPTY_FILES,
 
         INTERACTIVE_CONSOLE,
     }
@@ -104,6 +105,10 @@ public class ArgParser {
                 case "--no-interactive":
                 case "-N":
                     registerArgument(BivalentKey.INTERACTIVE_CONSOLE, false);
+                    break;
+                case "--skip-empty-files":
+                case "-se":
+                    registerArgument(BivalentKey.SKIP_EMPTY_FILES, true);
                     break;
                 default:
                     onWarning.accept("Unknown token: \"" + args[i] + "\"");

@@ -69,7 +69,7 @@ drop-wrappers | rw    | -                        | Clear all wrappers (file hash
 dump-wrappers | dw    | \<file name\>            | Dump the file hashes into a new file which can be loaded in another session
 load-wrappers | lw    | \<file name\>            | Load previously dumped wrappers from a file
 drop-options  | do    | -                        | Clear out any options for crawling
-add-options   | ad    | \<option\> \[option...\] | Add options afterwards; same syntax as on the command line (look above) <br> Old options are **not** discarded, including command line options
+add-options   | ao    | \<option\> \[option...\] | Add options afterwards; same syntax as on the command line (look above) <br> Old options are **not** discarded, including command line options
 
 ## Example
 

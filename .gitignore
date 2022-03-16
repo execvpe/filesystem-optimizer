@@ -1,5 +1,8 @@
-/.idea
+# Ignore IDE and plugin settings, but avoid ignoring really useful things
+!.idea
+.idea/*
+!.idea/codeStyles
+!.idea/encodings.xml
 
-/out
-
-/*.iml
+# Ignore build files
+out

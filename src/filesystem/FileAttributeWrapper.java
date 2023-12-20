@@ -1,7 +1,7 @@
 package filesystem;
 
-import com.sun.istack.internal.NotNull;
 import hashing.FileHash;
+import org.jetbrains.annotations.NotNull;
 
 import java.util.Arrays;
 import java.util.Objects;

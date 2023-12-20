@@ -83,7 +83,7 @@ Now you have the following problem: **Which ones are duplicates and are taking u
 First we will crawl the sorted directory and hash its files.
 
 ```
-$ java -jar FilesystemOptimizer.jar
+$ java -jar filesystem-optimizer.jar
 Filesystem Optimizer v1.0
 (0)$> c /example/path
 Entering directory "/example/path"
@@ -108,7 +108,7 @@ The number in brackets shows the number of files already hashed and stored in th
 
 **stderr**:
 ```
-$ java -jar FilesystemOptimizer.jar -ed -ef > no_longer_needed
+$ java -jar filesystem-optimizer.jar -ed -ef > no_longer_needed
 Filesystem Optimizer v1.0
 (0)$> lw hashes.wdump
 (7)$> ao -dup -min 5k -max 10M
